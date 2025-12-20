@@ -3,7 +3,12 @@
   <head>
     <title>Labirynt - Final Fixed</title>
     <meta charset="UTF-8" />
-    <style>body { margin: 0; overflow: hidden; }</style>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
     <script type="importmap">
       {
         "imports": {
@@ -16,277 +21,24 @@
       import * as THREE from "three";
       import { OBB } from "three/addons/math/OBB.js";
 
-      // --- KONFIGURACJA I ZMIENNE ---
-      const positions = [
-        [-1979.7333, 60.001, -1911.4667], [-614.4, 60.001, -1911.4667],
-        [-68.2666, 60.001, -1911.4667], [887.4667, 60.001, -1911.4667],
-        [-1843.2, 60.001, -1774.9333], [-1160.5334, 60.001, -1774.9333],
-        [-477.8666, 60.001, -1774.9333], [477.8667, 60.001, -1774.9333],
-        [614.4, 60.001, -1638.4], [-887.4666, 60.001, -1501.8667],
-        [204.8, 60.001, -1501.8667], [1979.7333, 60.001, -1501.8667],
-        [-1024, 60.001, -1365.3333], [-341.3333, 60.001, -1365.3333],
-        [1297.0667, 60.001, -1365.3333], [1570.1333, 60.001, -1365.3333],
-        [1843.2, 60.001, -1365.3333], [-1843.2, 60.001, -1228.8],
-        [-1297.0667, 60.001, -1228.8], [-477.8666, 60.001, -1228.8],
-        [1160.5333, 60.001, -1228.8], [-1979.7333, 60.001, -1092.2667],
-        [-1706.6667, 60.001, -1092.2667], [-750.9333, 60.001, -1092.2667],
-        [1706.6667, 60.001, -1092.2667], [-1979.7333, 60.001, -955.7333],
-        [-1297.0667, 60.001, -955.7333], [-1024, 60.001, -955.7333],
-        [-204.8, 60.001, -955.7333], [614.4, 60.001, -955.7333],
-        [887.4667, 60.001, -955.7333], [-1570.1334, 60.001, -819.2],
-        [-1160.5334, 60.001, -819.2], [-68.2666, 60.001, -819.2],
-        [750.9333, 60.001, -819.2], [1024, 60.001, -819.2],
-        [1570.1333, 60.001, -819.2], [1843.2, 60.001, -819.2],
-        [-1433.6, 60.001, -682.6667], [-1024, 60.001, -682.6667],
-        [-341.3333, 60.001, -682.6667], [204.8, 60.001, -682.6667],
-        [-1706.6667, 60.001, -546.1333], [-1297.0667, 60.001, -546.1333],
-        [-887.4666, 60.001, -546.1333], [-204.8, 60.001, -546.1333],
-        [68.2667, 60.001, -546.1333], [341.3334, 60.001, -546.1333],
-        [1024, 60.001, -409.6], [-1979.7333, 60.001, -273.0667],
-        [-204.8, 60.001, -273.0667], [341.3334, 60.001, -273.0667],
-        [614.4, 60.001, -273.0667], [1433.6, 60.001, -273.0667],
-        [1706.6667, 60.001, -273.0667], [-1570.1334, 60.001, -136.5333],
-        [-1297.0667, 60.001, -136.5333], [-204.8, 60.001, -136.5333],
-        [68.2667, 60.001, -136.5333], [477.8667, 60.001, -136.5333],
-        [750.9333, 60.001, -136.5333], [1297.0667, 60.001, -136.5333],
-        [1843.2, 60.001, -136.5333], [-1160.5334, 60.001, 0],
-        [750.9333, 60.001, 0], [1297.0667, 60.001, 0],
-        [-1570.1334, 60.001, 136.5333], [-750.9333, 60.001, 136.5333],
-        [68.2667, 60.001, 136.5333], [614.4, 60.001, 136.5333],
-        [887.4667, 60.001, 136.5333], [1160.5333, 60.001, 136.5333],
-        [-614.4, 60.001, 273.0667], [1433.6, 60.001, 273.0667],
-        [204.8, 60.001, 409.6], [1843.2, 60.001, 409.6],
-        [-1570.1334, 60.001, 546.1333], [1433.6, 60.001, 546.1333],
-        [-1024, 60.001, 682.6667], [-477.8666, 60.001, 682.6667],
-        [614.4, 60.001, 682.6667], [1433.6, 60.001, 682.6667],
-        [-1979.7333, 60.001, 819.2], [-887.4666, 60.001, 819.2],
-        [-341.3333, 60.001, 819.2], [1570.1333, 60.001, 819.2],
-        [-1160.5334, 60.001, 955.7333], [-614.4, 60.001, 955.7333],
-        [-341.3333, 60.001, 955.7333], [750.9333, 60.001, 955.7333],
-        [1024, 60.001, 955.7333], [-1570.1334, 60.001, 1092.2667],
-        [-1024, 60.001, 1092.2667], [-614.4, 60.001, 1092.2667],
-        [68.2667, 60.001, 1092.2667], [341.3334, 60.001, 1092.2667],
-        [614.4, 60.001, 1092.2667], [1160.5333, 60.001, 1092.2667],
-        [1706.6667, 60.001, 1092.2667], [-1843.2, 60.001, 1228.8],
-        [-887.4666, 60.001, 1228.8], [-68.2666, 60.001, 1228.8],
-        [204.8, 60.001, 1228.8], [614.4, 60.001, 1228.8],
-        [1843.2, 60.001, 1228.8], [-1706.6667, 60.001, 1365.3333],
-        [1024, 60.001, 1365.3333], [1706.6667, 60.001, 1365.3333],
-        [1979.7333, 60.001, 1365.3333], [-1843.2, 60.001, 1501.8667],
-        [-750.9333, 60.001, 1501.8667], [477.8667, 60.001, 1501.8667],
-        [750.9333, 60.001, 1501.8667], [-1843.2, 60.001, 1638.4],
-        [-750.9333, 60.001, 1638.4], [-477.8666, 60.001, 1638.4],
-        [-1979.7333, 60.001, 1774.9333], [341.3334, 60.001, 1774.9333],
-        [614.4, 60.001, 1774.9333], [1570.1333, 60.001, 1774.9333],
-        [1979.7333, 60.001, 1774.9333], [-1024, 60.001, 1911.4667],
-        [1570.1333, 60.001, 1911.4667], [1843.2, 60.001, 1911.4667],
-        [-1911.4667, 60.001, 1706.6667], [-1911.4667, 60.001, -887.4667],
-        [-1911.4667, 60.001, -1570.1333], [-1774.9334, 60.001, 1297.0667],
-        [-1774.9334, 60.001, -68.2667], [-1774.9334, 60.001, -341.3333],
-        [-1774.9334, 60.001, -1706.6667], [-1638.4, 60.001, 887.4667],
-        [-1638.4, 60.001, 204.8], [-1638.4, 60.001, -68.2667],
-        [-1638.4, 60.001, -750.9333], [-1501.8667, 60.001, 1843.2],
-        [-1501.8667, 60.001, 1433.6], [-1501.8667, 60.001, 68.2667],
-        [-1501.8667, 60.001, -341.3333], [-1501.8667, 60.001, -614.4],
-        [-1501.8667, 60.001, -1433.6], [-1501.8667, 60.001, -1843.2],
-        [-1365.3334, 60.001, 1433.6], [-1365.3334, 60.001, -1160.5333],
-        [-1365.3334, 60.001, -1570.1333], [-1365.3334, 60.001, -1979.7333],
-        [-1228.8, 60.001, 1843.2], [-1228.8, 60.001, 1570.1333],
-        [-1228.8, 60.001, 1297.0667], [-1228.8, 60.001, 204.8],
-        [-1228.8, 60.001, -204.8], [-1228.8, 60.001, -477.8667],
-        [-1228.8, 60.001, -1843.2], [-1092.2667, 60.001, 477.8667],
-        [-1092.2667, 60.001, 204.8], [-1092.2667, 60.001, -68.2667],
-        [-1092.2667, 60.001, -341.3333], [-1092.2667, 60.001, -614.4],
-        [-1092.2667, 60.001, -1160.5333], [-1092.2667, 60.001, -1433.6],
-        [-1092.2667, 60.001, -1979.7333], [-955.7333, 60.001, 1979.7333],
-        [-955.7333, 60.001, 1706.6667], [-955.7333, 60.001, -68.2667],
-        [-955.7333, 60.001, -1843.2], [-819.2, 60.001, 1843.2],
-        [-819.2, 60.001, 1570.1333], [-819.2, 60.001, 341.3333],
-        [-819.2, 60.001, 68.2667], [-819.2, 60.001, -477.8667],
-        [-819.2, 60.001, -750.9333], [-819.2, 60.001, -1024],
-        [-819.2, 60.001, -1297.0667], [-682.6666, 60.001, 1706.6667],
-        [-682.6666, 60.001, -68.2667], [-682.6666, 60.001, -1843.2],
-        [-546.1333, 60.001, 887.4667], [-546.1333, 60.001, 477.8667],
-        [-546.1333, 60.001, 204.8], [-546.1333, 60.001, -750.9333],
-        [-546.1333, 60.001, -1297.0667], [-546.1333, 60.001, -1706.6667],
-        [-546.1333, 60.001, -1979.7333], [-409.6, 60.001, 1706.6667],
-        [-409.6, 60.001, -1297.0667], [-409.6, 60.001, -1570.1333],
-        [-409.6, 60.001, -1843.2], [-273.0666, 60.001, -341.3333],
-        [-136.5333, 60.001, 477.8667], [-136.5333, 60.001, 204.8],
-        [-136.5333, 60.001, -750.9333], [-136.5333, 60.001, -1570.1333],
-        [0, 60.001, 1979.7333], [0, 60.001, 1160.5333],
-        [136.5334, 60.001, 1843.2], [136.5334, 60.001, 1297.0667],
-        [136.5334, 60.001, 1024], [136.5334, 60.001, -1979.7333],
-        [273.0667, 60.001, 1706.6667], [273.0667, 60.001, -614.4],
-        [409.6, 60.001, 1025], [409.6, 60.001, 341.3333],
-        [409.6, 60.001, -614.4], [546.1334, 60.001, 477.8667],
-        [546.1334, 60.001, -1160.5333], [682.6667, 60.001, 1843.2],
-        [682.6667, 60.001, 1160.5333], [682.6667, 60.001, 887.4667],
-        [682.6667, 60.001, 614.4], [682.6667, 60.001, -204.8],
-        [682.6667, 60.001, -477.8667], [819.2, 60.001, -1570.1333],
-        [955.7333, 60.001, 1843.2], [1092.2667, 60.001, 1433.6],
-        [1092.2667, 60.001, 614.4], [1092.2667, 60.001, -614.4],
-        [1092.2667, 60.001, -1843.2], [1228.8, 60.001, 750.9333],
-        [1228.8, 60.001, 68.2667], [1228.8, 60.001, -341.3333],
-        [1228.8, 60.001, -1979.7333], [1501.8667, 60.001, 750.9333],
-        [1501.8667, 60.001, 477.8667], [1501.8667, 60.001, -614.4],
-        [1501.8667, 60.001, -1024], [1638.4, 60.001, 750.9333],
-        [1638.4, 60.001, -1433.6], [1638.4, 60.001, -1843.2],
-        [1774.9333, 60.001, 1706.6667], [1774.9333, 60.001, 1433.6],
-        [1774.9333, 60.001, 1160.5333], [1774.9333, 60.001, -204.8],
-        [1774.9333, 60.001, -1160.5333], [1774.9333, 60.001, -1433.6],
-        [1774.9333, 60.001, -1843.2], [1911.4667, 60.001, 1843.2],
-        [1911.4667, 60.001, 1570.1333], [1911.4667, 60.001, 614.4],
-        [1911.4667, 60.001, 341.3333], [1911.4667, 60.001, -1024],
-        [1911.4667, 60.001, -1297.0667], [1911.4667, 60.001, -1706.6667],
-        [1911.4667, 60.001, -1911.4667], [-1501.8667, 60.001, -1774.9333],
-        [0, 60.001, -1774.9333], [955.7333, 60.001, -1774.9333],
-        [1774.9333, 60.001, -1774.9333], [-1774.9333, 60.001, -1638.4],
-        [955.7333, 60.001, -1638.4], [-1774.9333, 60.001, -1501.8667],
-        [-1228.8, 60.001, -1501.8667], [682.6667, 60.001, -1501.8667],
-        [1092.2667, 60.001, -1501.8667], [-1365.3334, 60.001, -1365.3333],
-        [-682.6666, 60.001, -1365.3333], [0, 60.001, -1365.3333],
-        [546.1334, 60.001, -1365.3333], [955.7333, 60.001, -1365.3333],
-        [-955.7333, 60.001, -1228.8], [-136.5333, 60.001, -1228.8],
-        [-1638.4, 60.001, -955.7333], [-546.1333, 60.001, -955.7333],
-        [409.6, 60.001, -819.2], [-1774.9333, 60.001, -682.6667],
-        [1365.3333, 60.001, -546.1333], [-1774.9333, 60.001, -409.6],
-        [-1228.8, 60.001, -409.6], [-273.06663, 60.001, -409.6],
-        [682.6667, 60.001, -409.6], [1365.3333, 60.001, -409.6],
-        [1774.9333, 60.001, -409.6], [-1638.4, 60.001, -273.0667],
-        [-546.1333, 60.001, -273.0667], [-955.7333, 60.001, -136.5333],
-        [-546.1333, 60.001, -136.5333], [-136.5333, 60.001, 0],
-        [273.0667, 60.001, 0], [1774.9333, 60.001, 0],
-        [-1092.2667, 60.001, 136.5333], [-1365.3334, 60.001, 273.0667],
-        [-955.7333, 60.001, 273.0667], [-273.0666, 60.001, 273.0667],
-        [409.6, 60.001, 273.0667], [-1228.8, 60.001, 409.6],
-        [682.6667, 60.001, 409.6], [-1228.8, 60.001, 546.1333],
-        [-819.2, 60.001, 546.1333], [409.6, 60.001, 546.1333],
-        [1092.2667, 60.001, 546.1333], [-1365.3334, 60.001, 682.6667],
-        [-136.5333, 60.001, 682.6667], [273.0667, 60.001, 682.6667],
-        [955.7333, 60.001, 682.6667], [1774.9333, 60.001, 682.6667],
-        [-1501.8667, 60.001, 819.2], [1092.2667, 60.001, 819.2],
-        [1911.4667, 60.001, 819.2], [0, 60.001, 955.7333],
-        [1501.8667, 60.001, 955.7333], [-273.0666, 60.001, 1092.2667],
-        [-1365.3334, 60.001, 1228.8], [-409.6, 60.001, 1228.8],
-        [955.7333, 60.001, 1228.8], [-1092.2667, 60.001, 1365.3333],
-        [-409.6, 60.001, 1365.3333], [682.6667, 60.001, 1365.3333],
-        [1638.4, 60.001, 1501.8667], [1092.2667, 60.001, 1638.4],
-        [1228.8, 60.001, 1774.9333], [136.5334, 60.001, 1911.4667],
-        [682.6667, 60.001, 1911.4667], [-1911.4667, 60.001, -136.5333],
-        [-1911.4667, 60.001, -546.1333], [-1774.9334, 60.001, 1774.9333],
-        [-1774.9334, 60.001, 955.7333], [-1774.9334, 60.001, -682.6667],
-        [-1774.9334, 60.001, -1092.2667], [-1638.4, 60.001, 1638.4],
-        [-1638.4, 60.001, 1228.8], [-1638.4, 60.001, -1365.3333],
-        [-1501.8667, 60.001, 546.1333], [-1365.3334, 60.001, 1092.2667],
-        [-1228.8, 60.001, -819.2], [-1228.8, 60.001, -1365.3333],
-        [-1092.2667, 60.001, 1365.3333], [-1092.2667, 60.001, 819.2],
-        [-682.6666, 60.001, -1228.8], [-546.1333, 60.001, 1501.8667],
-        [-409.6, 60.001, 682.6667], [-409.6, 60.001, 136.5333],
-        [-136.5333, 60.001, 1365.3333], [-136.5333, 60.001, 819.2],
-        [-136.5333, 60.001, -136.5333], [-136.5333, 60.001, -1228.8],
-        [-136.5333, 60.001, -1911.4667], [0, 60.001, -409.6],
-        [0, 60.001, -1501.8667], [136.5334, 60.001, -136.5333],
-        [136.5334, 60.001, -1501.8667], [273.0667, 60.001, -273.0667],
-        [409.6, 60.001, 1911.4667], [409.6, 60.001, 0],
-        [409.6, 60.001, -1774.9333], [546.1334, 60.001, -136.5333],
-        [682.6667, 60.001, 1501.8667], [682.6667, 60.001, 273.0667],
-        [682.6667, 60.001, -819.2], [682.6667, 60.001, -1228.8],
-        [682.6667, 60.001, -1911.4667], [819.2, 60.001, 1774.9333],
-        [819.2, 60.001, 1228.8], [819.2, 60.001, 0],
-        [819.2, 60.001, -955.7333], [819.2, 60.001, -1911.4667],
-        [955.7333, 60.001, -1501.8667], [1092.2667, 60.001, 273.0667],
-        [1092.2667, 60.001, -136.5333], [1228.8, 60.001, 409.6],
-        [1228.8, 60.001, -1638.4], [1365.3333, 60.001, -1501.8667],
-        [1365.3333, 60.001, -1911.4667], [1501.8667, 60.001, 1501.8667],
-        [1501.8667, 60.001, 1092.2667], [1501.8667, 60.001, -1774.9333],
-        [1638.4, 60.001, 1092.2667], [1638.4, 60.001, 409.6],
-        [1911.4667, 60.001, 955.7333], [-1570.1334, 60.001, -1911.4667],
-        [-1024, 60.001, -1911.4667], [-1297.0667, 60.001, -1638.4],
-        [-750.9333, 60.001, -1638.4], [-204.8, 60.001, -1638.4],
-        [1706.6667, 60.001, -1638.4], [-477.8666, 60.001, -1501.8667],
-        [1570.1333, 60.001, -1501.8667], [-1843.2, 60.001, -1365.3333],
-        [750.9333, 60.001, -1228.8], [1570.1333, 60.001, -1228.8],
-        [-1297.0667, 60.001, -1092.2667], [-341.3333, 60.001, -1092.2667],
-        [887.4667, 60.001, -1092.2667], [204.8, 60.001, -955.7333],
-        [-750.9333, 60.001, -819.2], [614.4, 60.001, -682.6667],
-        [1297.0667, 60.001, -682.6667], [-750.9333, 60.001, -409.6],
-        [204.8, 60.001, -409.6], [1024, 60.001, -273.0667],
-        [-1570.1334, 60.001, 0], [887.4667, 60.001, 273.0667],
-        [-1843.2, 60.001, 682.6667], [204.8, 60.001, 819.2],
-        [-1570.1334, 60.001, 955.7333], [204.8, 60.001, 1365.3333],
-        [-1297.0667, 60.001, 1501.8667], [1160.5333, 60.001, 1501.8667],
-        [1843.2, 60.001, 1638.4], [-68.2666, 60.001, 1774.9333],
-        [-1706.6667, 60.001, 1911.4667], [1160.5333, 60.001, 1911.4667],
-        [-1911.4667, 60.001, 341.3333], [-1774.9334, 60.001, 341.3333],
-        [-1501.8667, 60.001, -1024], [-1365.3334, 60.001, 1843.2],
-        [-1365.3334, 60.001, -750.9333], [-1228.8, 60.001, 887.4667],
-        [-819.2, 60.001, -1706.6667], [-682.6666, 60.001, 477.8667],
-        [-682.6666, 60.001, -750.9333], [-546.1333, 60.001, -341.3333],
-        [-409.6, 60.001, -614.4], [-273.0666, 60.001, 1706.6667],
-        [-273.0666, 60.001, 341.3333], [-273.0666, 60.001, -1843.2],
-        [273.0667, 60.001, 1024], [273.0667, 60.001, 341.3333],
-        [273.0667, 60.001, -1843.2], [409.6, 60.001, 1433.6],
-        [409.6, 60.001, -1297.0667], [546.1334, 60.001, 887.4667],
-        [546.1334, 60.001, -1843.2], [819.2, 60.001, 750.9333],
-        [955.7333, 60.001, 887.4667], [955.7333, 60.001, -68.2667],
-        [955.7333, 60.001, -614.4], [1092.2667, 60.001, -1160.5333],
-        [1228.8, 60.001, 1843.2], [1365.3333, 60.001, 68.2667],
-        [1365.3333, 60.001, -887.4667], [1501.8667, 60.001, -68.2667],
-        [1638.4, 60.001, 1706.6667], [1638.4, 60.001, -68.2667],
-        [1638.4, 60.001, -955.7333], [819.2, 60.001, -546.1333],
-        [-1092.2667, 60.001, -273.0667], [-682.6666, 60.001, 0],
-        [1638.4, 60.001, 136.5333], [-1774.9333, 60.001, 409.6],
-        [-682.6666, 60.001, 409.6], [-136.5333, 60.001, 546.1333],
-        [-1365.3334, 60.001, 1638.4], [136.5334, 60.001, 1638.4],
-        [-409.6, 60.001, 1911.4667], [-1365.3334, 60.001, 136.5333],
-        [-955.7333, 60.001, 1228.8], [-273.0666, 60.001, 1092.2667],
-        [-273.0666, 60.001, -819.2], [0, 60.001, 136.5333],
-        [0, 60.001, -955.7333], [136.5334, 60.001, 546.1333],
-        [273.0667, 60.001, -1092.2667], [546.1334, 60.001, 1501.8667],
-        [1228.8, 60.001, 1228.8], [1228.8, 60.001, -1092.2667],
-        [1638.4, 60.001, -819.2], [1774.9333, 60.001, -682.6667],
-        [1911.4667, 60.001, -409.6], [1297.0667, 60.001, 409.6],
-        [-68.2666, 60.001, 1501.8667], [-1911.4667, 60.001, 1160.5333],
-        [-955.7333, 60.001, -887.4667], [-682.6666, 60.001, 1160.5333],
-        [136.5334, 60.001, -887.4667], [1774.9333, 60.001, 614.4],
-        [-819.2, 60.001, 1774.9333], [-819.2, 60.001, 955.7333],
-        [1365.3333, 60.001, 1160.5333], [-1092.2667, 60.001, -2048],
-        [1092.2667, 60.001, 2048], [1024, 60.001, -2048],
-        [-1024, 60.001, 2048], [-2048, 60.001, 0], [2048, 60.001, 0]
-      ];
-      
-      const S = 0.2916666666666667; 
-      const SCALES = {
-        s171: 1.429444166666667, s308: 2.567221666666667, s444: 3.705,
-        s581: 4.8427775, s717: 5.980555833333333, s854: 7.118334166666667,
-        s990: 8.256110833333333, s1946: 16.220555, s2083: 17.35833333333333, s4131: 34.425
-      };
-      
-      const wallSegments = [
-        { count: 124, s: [SCALES.s171, 1, S], rep: [3, 1] },
-        { count: 118, s: [S, 1, SCALES.s171], rep: [1, 3] },
-        { count: 69,  s: [SCALES.s308, 1, S], rep: [3, 1] },
-        { count: 56,  s: [S, 1, SCALES.s308], rep: [1, 3] },
-        { count: 33,  s: [SCALES.s444, 1, S], rep: [8, 1] },
-        { count: 32,  s: [S, 1, SCALES.s444], rep: [1, 8] },
-        { count: 11,  s: [SCALES.s581, 1, S], rep: [8, 1] },
-        { count: 14,  s: [S, 1, SCALES.s581], rep: [1, 8] },
-        { count: 2,   s: [SCALES.s717, 1, S], rep: [5, 1] },
-        { count: 5,   s: [S, 1, SCALES.s717], rep: [1, 5] },
-        { count: 1,   s: [SCALES.s854, 1, S], rep: [5, 1] },
-        { count: 1,   s: [S, 1, SCALES.s854], rep: [1, 5] },
-        { count: 1,   s: [S, 1, SCALES.s990], rep: [1, 12] },
-        { count: 2,   s: [SCALES.s1946, 1, S], rep: [20, 1] },
-        { count: 2,   s: [SCALES.s2083, 1, S], rep: [20, 1] },
-        { count: 2,   s: [S, 1, SCALES.s4131], rep: [1, 50] }
-      ];
+      // --- KONFIGURACJA ŚWIATA ---
+      const WALL_SIZE = 120; // Rozmiar jednego klocka ściany (szer/dł/wys)
+      const MAZE_WIDTH = 31; // Musi być liczbą nieparzystą dla tego algorytmu
+      const MAZE_HEIGHT = 31;
 
       // Setup Sceny
       const scene = new THREE.Scene();
       // UWAGA: Zwiększyłem 'near' z 0.1 do 1.5, żeby naprawić z-fighting
-      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1.5, 3000);
-      const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        1.5,
+        3000
+      );
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        logarithmicDepthBuffer: true,
+      });
       const cameraRaycaster = new THREE.Raycaster();
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
@@ -303,7 +55,9 @@
       };
 
       const texGround = loadTex("/assets/textures/Maze/groundT2.png", 24, 24);
-      const texHedgeBase = loadTex("/assets/textures/Maze/hedgeFixedProbably.png");
+      const texHedgeBase = loadTex(
+        "/assets/textures/Maze/hedgeFixedProbably.png"
+      );
       const texHedgeX = loadTex("/assets/textures/Maze/hedgeX.png");
 
       scene.background = new THREE.CubeTextureLoader()
@@ -313,20 +67,32 @@
 
       const createMaterials = (repX, repY) => {
         const matProps = { metalness: 0, roughness: 1 };
-        const sideMat = new THREE.MeshStandardMaterial({ ...matProps, map: texHedgeBase.clone() });
+        const sideMat = new THREE.MeshStandardMaterial({
+          ...matProps,
+          map: texHedgeBase.clone(),
+        });
         sideMat.map.repeat.set(repX, repY);
-        
-        const endMat = new THREE.MeshStandardMaterial({ ...matProps, map: texHedgeX });
-        const topMat = new THREE.MeshStandardMaterial({ ...matProps, map: texHedgeBase.clone() });
-        
+
+        const endMat = new THREE.MeshStandardMaterial({
+          ...matProps,
+          map: texHedgeX,
+        });
+        const topMat = new THREE.MeshStandardMaterial({
+          ...matProps,
+          map: texHedgeBase.clone(),
+        });
+
         return [endMat, endMat, topMat, topMat, sideMat, sideMat];
       };
 
       // --- BUDOWANIE ŚWIATA ---
-      
+
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(4131, 4131),
-        new THREE.MeshStandardMaterial({ map: texGround, side: THREE.DoubleSide })
+        new THREE.MeshStandardMaterial({
+          map: texGround,
+          side: THREE.DoubleSide,
+        })
       );
       ground.rotation.x = -Math.PI / 2;
       ground.receiveShadow = true;
@@ -335,75 +101,91 @@
       const playerGeo = new THREE.BoxGeometry(24, 70, 24);
       playerGeo.computeBoundingBox(); // WAŻNE: Naprawia błąd 'null' w OBB
       playerGeo.userData.obb = new OBB().fromBox3(playerGeo.boundingBox);
-      const player = new THREE.Mesh(playerGeo, new THREE.MeshStandardMaterial({ color: "red" }));
+      const player = new THREE.Mesh(
+        playerGeo,
+        new THREE.MeshStandardMaterial({ color: "red" })
+      );
       player.position.set(-68.27, 35.001, -2048);
       player.userData.obb = new OBB();
       scene.add(player);
 
       scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-      const spotLight = new THREE.SpotLight(0xffffff, 0, 350, Math.PI / 10, 0.8);
+      const spotLight = new THREE.SpotLight(
+        0xffffff,
+        0,
+        350,
+        Math.PI / 10,
+        0.8
+      );
       spotLight.castShadow = true;
       spotLight.shadow.mapSize.width = 1024;
       spotLight.shadow.mapSize.height = 1024;
       scene.add(spotLight);
       scene.add(spotLight.target);
 
-      // --- GENEROWANIE LABIRYNTU ---
+      // --- GENEROWANIE LABIRYNTU (NOWE) ---
+      const mazeMap = generateMaze(MAZE_WIDTH, MAZE_HEIGHT);
       const collisionBoxes = [];
-      const wallMeshes = [];
-      const hedgeGeometry = new THREE.BoxGeometry(120, 120, 120);
-      let globalPosIndex = 0;
+      const wallMeshes = []; // Dla kamery
 
-      // Usunąłem błędny kod tworzenia mesha przed pętlą!
+      // Geometria - prosty sześcian
+      const geometry = new THREE.BoxGeometry(WALL_SIZE, WALL_SIZE, WALL_SIZE);
 
-      wallSegments.forEach(seg => {
-        const mat = createMaterials(seg.rep[0], seg.rep[1]);
-        
-        let finalMats; // Deklaracja zmiennej
+      // Materiał - używamy Twoich tekstur, ale uproszczonych
+      // Skoro każdy klocek jest 1x1, nie potrzebujemy dynamicznego skalowania tekstury per segment
+      const matSide = new THREE.MeshStandardMaterial({ map: texHedgeBase });
+      const matTop = new THREE.MeshStandardMaterial({ map: texHedgeX }); // Lub inna tekstura na górę
+      const materials = [matSide, matSide, matTop, matTop, matSide, matSide];
 
-        if (seg.s[0] > seg.s[2]) {
-           const longMat = new THREE.MeshStandardMaterial({map: texHedgeBase.clone()});
-           longMat.map.repeat.set(seg.rep[0], 1); 
-           const shortMat = new THREE.MeshStandardMaterial({map: texHedgeX});
-           finalMats = [shortMat, shortMat, mat[2], mat[3], longMat, longMat];
-        } else {
-           const longMat = new THREE.MeshStandardMaterial({map: texHedgeBase.clone()});
-           longMat.map.repeat.set(1, seg.rep[1]);
-           const shortMat = new THREE.MeshStandardMaterial({map: texHedgeX});
-           finalMats = [longMat, longMat, mat[2], mat[3], shortMat, shortMat];
+      // Policz ile jest ścian, żeby stworzyć InstancedMesh o odpowiednim rozmiarze
+      let wallCount = 0;
+      for (let x = 0; x < MAZE_WIDTH; x++) {
+        for (let y = 0; y < MAZE_HEIGHT; y++) {
+          if (mazeMap[x][y] === 1) wallCount++;
         }
+      }
 
-        const mesh = new THREE.InstancedMesh(hedgeGeometry, finalMats, seg.count);
-        mesh.receiveShadow = true;
-        mesh.castShadow = true;
-        
-        wallMeshes.push(mesh); // Dodajemy do tablicy dla kamery
+      const mesh = new THREE.InstancedMesh(geometry, materials, wallCount);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
 
-        const dummy = new THREE.Object3D();
+      const dummy = new THREE.Object3D();
+      let i = 0;
 
-        for (let i = 0; i < seg.count; i++) {
-          if (globalPosIndex >= positions.length) break;
-          
-          const p = positions[globalPosIndex];
-          dummy.position.set(p[0], p[1], p[2]);
-          dummy.scale.set(seg.s[0], seg.s[1], seg.s[2]);
-          dummy.updateMatrix();
-          mesh.setMatrixAt(i, dummy.matrix);
+      // Offset, żeby labirynt był wycentrowany wokół (0,0) - tak jak w Twoim oryginale
+      const offsetX = (MAZE_WIDTH * WALL_SIZE) / 2;
+      const offsetZ = (MAZE_HEIGHT * WALL_SIZE) / 2;
 
-          const instanceBox = new THREE.Box3();
-          const size = new THREE.Vector3(120 * seg.s[0], 120 * seg.s[1], 120 * seg.s[2]);
-          const center = new THREE.Vector3(p[0], p[1], p[2]);
-          instanceBox.setFromCenterAndSize(center, size);
-          collisionBoxes.push(instanceBox);
+      for (let x = 0; x < MAZE_WIDTH; x++) {
+        for (let z = 0; z < MAZE_HEIGHT; z++) {
+          if (mazeMap[x][z] === 1) {
+            // Ustawienie pozycji
+            dummy.position.set(
+              x * WALL_SIZE - offsetX,
+              WALL_SIZE / 2, // Y: połowa wysokości, żeby stał na ziemi
+              z * WALL_SIZE - offsetZ
+            );
 
-          globalPosIndex++;
+            dummy.updateMatrix();
+            mesh.setMatrixAt(i++, dummy.matrix);
+
+            // Kolizje
+            const instanceBox = new THREE.Box3();
+            instanceBox.setFromCenterAndSize(
+              dummy.position,
+              new THREE.Vector3(WALL_SIZE, WALL_SIZE, WALL_SIZE)
+            );
+            collisionBoxes.push(instanceBox);
+          }
         }
-        scene.add(mesh);
-      });
+      }
+
+      scene.add(mesh);
+      wallMeshes.push(mesh); // Ważne dla kamery
 
       // --- LOGIKA GRY ---
       const keys = {};
-      const speed = 4.0; 
+      const speed = 4.0;
       const rotSpeed = 0.04;
       const prevPos = new THREE.Vector3();
 
@@ -411,10 +193,61 @@
       window.addEventListener("keyup", (e) => {
         keys[e.code] = false;
         if (e.key.toLowerCase() === "f") {
-            spotLight.power = spotLight.power > 0 ? 0 : 840000;
-            spotLight.intensity = spotLight.intensity > 0 ? 0 : 0.5;
+          spotLight.power = spotLight.power > 0 ? 0 : 840000;
+          spotLight.intensity = spotLight.intensity > 0 ? 0 : 0.5;
         }
       });
+
+      function generateMaze(width, height) {
+        // 1. Wypełnij wszystko ścianami (1)
+        const map = [];
+        for (let x = 0; x < width; x++) {
+          map[x] = [];
+          for (let y = 0; y < height; y++) {
+            map[x][y] = 1;
+          }
+        }
+
+        // 2. Funkcja wiercąca korytarze (Recursive Backtracker)
+        function carve(x, y) {
+          const directions = [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ].sort(() => Math.random() - 0.5); // Losowa kolejność kierunków
+
+          for (let i = 0; i < directions.length; i++) {
+            const dx = directions[i][0];
+            const dy = directions[i][1];
+
+            const nx = x + dx * 2;
+            const ny = y + dy * 2;
+
+            if (
+              nx > 0 &&
+              nx < width &&
+              ny > 0 &&
+              ny < height &&
+              map[nx][ny] === 1
+            ) {
+              map[x + dx][y + dy] = 0; // Usuń ścianę pomiędzy
+              map[nx][ny] = 0; // Usuń ścianę w punkcie docelowym
+              carve(nx, ny); // Rekurencja
+            }
+          }
+        }
+
+        // Start z punktu (1,1) i oznacz jako pusty
+        map[1][1] = 0;
+        carve(1, 1);
+
+        // Opcjonalnie: Zrób wejście i wyjście
+        map[1][0] = 0;
+        map[width - 2][height - 1] = 0;
+
+        return map;
+      }
 
       function updatePlayer() {
         prevPos.copy(player.position);
@@ -429,20 +262,29 @@
         player.userData.obb.applyMatrix4(player.matrixWorld);
 
         for (const wallBox of collisionBoxes) {
-            if (player.userData.obb.intersectsBox3(wallBox)) {
-                player.position.copy(prevPos);
-                // Nie używamy return, żeby kamera nadal się aktualizowała nawet jak stoimy w miejscu
-                break; 
-            }
+          if (player.userData.obb.intersectsBox3(wallBox)) {
+            player.position.copy(prevPos);
+            // Nie używamy return, żeby kamera nadal się aktualizowała nawet jak stoimy w miejscu
+            break;
+          }
         }
 
         // --- KAMERA I RAYCASTING (POPRAWIONE) ---
         const idealOffset = new THREE.Vector3(0, 45, 75);
-        idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
-        const idealPosition = new THREE.Vector3().copy(player.position).add(idealOffset);
+        idealOffset.applyAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          player.rotation.y
+        );
+        const idealPosition = new THREE.Vector3()
+          .copy(player.position)
+          .add(idealOffset);
 
-        const playerHeadPos = new THREE.Vector3().copy(player.position).add(new THREE.Vector3(0, 30, 0));
-        const direction = new THREE.Vector3().subVectors(idealPosition, playerHeadPos).normalize();
+        const playerHeadPos = new THREE.Vector3()
+          .copy(player.position)
+          .add(new THREE.Vector3(0, 30, 0));
+        const direction = new THREE.Vector3()
+          .subVectors(idealPosition, playerHeadPos)
+          .normalize();
         const maxDistance = playerHeadPos.distanceTo(idealPosition);
 
         cameraRaycaster.set(playerHeadPos, direction);
@@ -458,11 +300,15 @@
           camera.position.copy(idealPosition);
         }
 
-        const lookTarget = player.position.clone().add(new THREE.Vector3(0, 20, 0));
+        const lookTarget = player.position
+          .clone()
+          .add(new THREE.Vector3(0, 20, 0));
         camera.lookAt(lookTarget);
 
         spotLight.position.copy(player.position);
-        spotLight.target.position.copy(player.position).add(new THREE.Vector3(0,0,-1).applyQuaternion(player.quaternion));
+        spotLight.target.position
+          .copy(player.position)
+          .add(new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion));
         spotLight.target.updateMatrixWorld();
       }
 
@@ -471,10 +317,10 @@
         updatePlayer();
         renderer.render(scene, camera);
       }
-      
+
       animate();
 
-      window.addEventListener('resize', () => {
+      window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
