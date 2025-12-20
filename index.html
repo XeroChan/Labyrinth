@@ -1,14 +1,9 @@
 <!DOCTYPE html>
 <html lang="pl-PL">
   <head>
-    <title>Labirynt - Final Fixed</title>
+    <title>Labirynt - Procedural Grid</title>
     <meta charset="UTF-8" />
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-    </style>
+    <style>body { margin: 0; overflow: hidden; }</style>
     <script type="importmap">
       {
         "imports": {
@@ -21,233 +16,167 @@
       import * as THREE from "three";
       import { OBB } from "three/addons/math/OBB.js";
 
-      // --- KONFIGURACJA ŚWIATA ---
-      const WALL_SIZE = 120; // Rozmiar jednego klocka ściany (szer/dł/wys)
-      const MAZE_WIDTH = 31; // Musi być liczbą nieparzystą dla tego algorytmu
-      const MAZE_HEIGHT = 31;
+      // --- KONFIGURACJA ---
+      const WALL_SIZE = 120;  // Rozmiar jednego klocka
+      const MAZE_WIDTH = 21;  // Szerokość (musi być nieparzysta!)
+      const MAZE_HEIGHT = 21; // Wysokość (musi być nieparzysta!)
+      
+      // Obliczamy przesunięcie, żeby labirynt był wycentrowany na (0,0,0)
+      const OFFSET_X = (MAZE_WIDTH * WALL_SIZE) / 2;
+      const OFFSET_Z = (MAZE_HEIGHT * WALL_SIZE) / 2;
 
-      // Setup Sceny
+      // --- SETUP SCENY ---
       const scene = new THREE.Scene();
-      // UWAGA: Zwiększyłem 'near' z 0.1 do 1.5, żeby naprawić z-fighting
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        1.5,
-        3000
-      );
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        logarithmicDepthBuffer: true,
-      });
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1.5, 5000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
       const cameraRaycaster = new THREE.Raycaster();
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       document.body.appendChild(renderer.domElement);
 
-      // --- TEXTURY I MATERIAŁY ---
+      // --- TEXTURY ---
       const texLoader = new THREE.TextureLoader();
-      const loadTex = (path, repeatX = 1, repeatY = 1) => {
-        const t = texLoader.load(path);
-        t.wrapS = t.wrapT = THREE.RepeatWrapping;
-        t.repeat.set(repeatX, repeatY);
-        return t;
-      };
+      const texGround = texLoader.load("/assets/textures/Maze/groundT2.png");
+      texGround.wrapS = texGround.wrapT = THREE.RepeatWrapping;
+      texGround.repeat.set(MAZE_WIDTH, MAZE_HEIGHT); // Dopasowanie do rozmiaru labiryntu
 
-      const texGround = loadTex("/assets/textures/Maze/groundT2.png", 24, 24);
-      const texHedgeBase = loadTex(
-        "/assets/textures/Maze/hedgeFixedProbably.png"
-      );
-      const texHedgeX = loadTex("/assets/textures/Maze/hedgeX.png");
+      const texHedgeBase = texLoader.load("/assets/textures/Maze/hedgeFixedProbably.png");
+      const texHedgeX = texLoader.load("/assets/textures/Maze/hedgeX.png");
 
       scene.background = new THREE.CubeTextureLoader()
         .setPath("/assets/textures/forestv4/")
         .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
-      scene.fog = new THREE.FogExp2(0xcccccc, 0.008);
+      scene.fog = new THREE.FogExp2(0xcccccc, 0.005);
 
-      const createMaterials = (repX, repY) => {
-        const matProps = { metalness: 0, roughness: 1 };
-        const sideMat = new THREE.MeshStandardMaterial({
-          ...matProps,
-          map: texHedgeBase.clone(),
-        });
-        sideMat.map.repeat.set(repX, repY);
+      // --- ALGORYTM GENEROWANIA (Recursive Backtracker) ---
+      function generateMaze(width, height) {
+          const map = [];
+          // 1. Wypełnij ścianami
+          for (let x = 0; x < width; x++) {
+              map[x] = [];
+              for (let y = 0; y < height; y++) {
+                  map[x][y] = 1; 
+              }
+          }
 
-        const endMat = new THREE.MeshStandardMaterial({
-          ...matProps,
-          map: texHedgeX,
-        });
-        const topMat = new THREE.MeshStandardMaterial({
-          ...matProps,
-          map: texHedgeBase.clone(),
-        });
+          // 2. Wytnij korytarze
+          function carve(x, y) {
+              const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]].sort(() => Math.random() - 0.5);
+              for (let i = 0; i < directions.length; i++) {
+                  const dx = directions[i][0];
+                  const dy = directions[i][1];
+                  const nx = x + (dx * 2);
+                  const ny = y + (dy * 2);
 
-        return [endMat, endMat, topMat, topMat, sideMat, sideMat];
-      };
+                  if (nx > 0 && nx < width && ny > 0 && ny < height && map[nx][ny] === 1) {
+                      map[x + dx][y + dy] = 0;
+                      map[nx][ny] = 0;
+                      carve(nx, ny);
+                  }
+              }
+          }
+
+          map[1][1] = 0; // Start
+          carve(1, 1);
+          map[1][0] = 0; // Wejście
+          map[width - 2][height - 1] = 0; // Wyjście
+          return map;
+      }
+
+      const mazeMap = generateMaze(MAZE_WIDTH, MAZE_HEIGHT);
 
       // --- BUDOWANIE ŚWIATA ---
-
+      
+      // Podłoga
       const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(4131, 4131),
-        new THREE.MeshStandardMaterial({
-          map: texGround,
-          side: THREE.DoubleSide,
-        })
+        new THREE.PlaneGeometry(MAZE_WIDTH * WALL_SIZE, MAZE_HEIGHT * WALL_SIZE),
+        new THREE.MeshStandardMaterial({ map: texGround, side: THREE.DoubleSide })
       );
       ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0.1;
       ground.receiveShadow = true;
       scene.add(ground);
 
-      const playerGeo = new THREE.BoxGeometry(24, 70, 24);
-      playerGeo.computeBoundingBox(); // WAŻNE: Naprawia błąd 'null' w OBB
-      playerGeo.userData.obb = new OBB().fromBox3(playerGeo.boundingBox);
-      const player = new THREE.Mesh(
-        playerGeo,
-        new THREE.MeshStandardMaterial({ color: "red" })
-      );
-      player.position.set(-68.27, 35.001, -2048);
-      player.userData.obb = new OBB();
-      scene.add(player);
-
-      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-      const spotLight = new THREE.SpotLight(
-        0xffffff,
-        0,
-        350,
-        Math.PI / 10,
-        0.8
-      );
-      spotLight.castShadow = true;
-      spotLight.shadow.mapSize.width = 1024;
-      spotLight.shadow.mapSize.height = 1024;
-      scene.add(spotLight);
-      scene.add(spotLight.target);
-
-      // --- GENEROWANIE LABIRYNTU (NOWE) ---
-      const mazeMap = generateMaze(MAZE_WIDTH, MAZE_HEIGHT);
-      const collisionBoxes = [];
-      const wallMeshes = []; // Dla kamery
-
-      // Geometria - prosty sześcian
+      // Ściany (InstancedMesh dla wydajności)
       const geometry = new THREE.BoxGeometry(WALL_SIZE, WALL_SIZE, WALL_SIZE);
-
-      // Materiał - używamy Twoich tekstur, ale uproszczonych
-      // Skoro każdy klocek jest 1x1, nie potrzebujemy dynamicznego skalowania tekstury per segment
       const matSide = new THREE.MeshStandardMaterial({ map: texHedgeBase });
-      const matTop = new THREE.MeshStandardMaterial({ map: texHedgeX }); // Lub inna tekstura na górę
+      const matTop = new THREE.MeshStandardMaterial({ map: texHedgeX });
       const materials = [matSide, matSide, matTop, matTop, matSide, matSide];
 
-      // Policz ile jest ścian, żeby stworzyć InstancedMesh o odpowiednim rozmiarze
+      const collisionBoxes = [];
+      const wallMeshes = []; // Dla raycastera kamery
+
+      // Policz ściany
       let wallCount = 0;
       for (let x = 0; x < MAZE_WIDTH; x++) {
-        for (let y = 0; y < MAZE_HEIGHT; y++) {
-          if (mazeMap[x][y] === 1) wallCount++;
-        }
+          for (let y = 0; y < MAZE_HEIGHT; y++) {
+              if (mazeMap[x][y] === 1) wallCount++;
+          }
       }
 
       const mesh = new THREE.InstancedMesh(geometry, materials, wallCount);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-
+      
       const dummy = new THREE.Object3D();
-      let i = 0;
-
-      // Offset, żeby labirynt był wycentrowany wokół (0,0) - tak jak w Twoim oryginale
-      const offsetX = (MAZE_WIDTH * WALL_SIZE) / 2;
-      const offsetZ = (MAZE_HEIGHT * WALL_SIZE) / 2;
+      let index = 0;
 
       for (let x = 0; x < MAZE_WIDTH; x++) {
-        for (let z = 0; z < MAZE_HEIGHT; z++) {
-          if (mazeMap[x][z] === 1) {
-            // Ustawienie pozycji
-            dummy.position.set(
-              x * WALL_SIZE - offsetX,
-              WALL_SIZE / 2, // Y: połowa wysokości, żeby stał na ziemi
-              z * WALL_SIZE - offsetZ
-            );
+          for (let z = 0; z < MAZE_HEIGHT; z++) {
+              if (mazeMap[x][z] === 1) {
+                  // Pozycja w świecie = (Grid * Rozmiar) - Offset
+                  const worldX = (x * WALL_SIZE) - OFFSET_X + (WALL_SIZE/2);
+                  const worldZ = (z * WALL_SIZE) - OFFSET_Z + (WALL_SIZE/2);
 
-            dummy.updateMatrix();
-            mesh.setMatrixAt(i++, dummy.matrix);
+                  dummy.position.set(worldX, WALL_SIZE / 2, worldZ);
+                  dummy.updateMatrix();
+                  mesh.setMatrixAt(index++, dummy.matrix);
 
-            // Kolizje
-            const instanceBox = new THREE.Box3();
-            instanceBox.setFromCenterAndSize(
-              dummy.position,
-              new THREE.Vector3(WALL_SIZE, WALL_SIZE, WALL_SIZE)
-            );
-            collisionBoxes.push(instanceBox);
+                  // Box kolizji
+                  const box = new THREE.Box3();
+                  box.setFromCenterAndSize(dummy.position, new THREE.Vector3(WALL_SIZE, WALL_SIZE, WALL_SIZE));
+                  collisionBoxes.push(box);
+              }
           }
-        }
       }
-
       scene.add(mesh);
-      wallMeshes.push(mesh); // Ważne dla kamery
+      wallMeshes.push(mesh);
 
-      // --- LOGIKA GRY ---
+      // --- GRACZ ---
+      const playerGeo = new THREE.BoxGeometry(24, 70, 24);
+      playerGeo.computeBoundingBox();
+      playerGeo.userData.obb = new OBB().fromBox3(playerGeo.boundingBox);
+      const player = new THREE.Mesh(playerGeo, new THREE.MeshStandardMaterial({ color: "red" }));
+      
+      // !!! NAPRAWA SPAWNU !!!
+      // Ustawiamy gracza na polu [1][1] (zawsze puste w tym algorytmie)
+      const startGridX = 1;
+      const startGridZ = 1;
+      player.position.set(
+          (startGridX * WALL_SIZE) - OFFSET_X + (WALL_SIZE/2),
+          35.001, 
+          (startGridZ * WALL_SIZE) - OFFSET_Z + (WALL_SIZE/2)
+      );
+
+      player.userData.obb = new OBB();
+      scene.add(player);
+
+      // Światła
+      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+      const spotLight = new THREE.SpotLight(0xffffff, 1000, 500, Math.PI / 8, 0.5); // Zwiększona moc dla Three r160
+      spotLight.castShadow = true;
+      scene.add(spotLight);
+      scene.add(spotLight.target);
+
+      // --- LOGIKA ---
       const keys = {};
-      const speed = 4.0;
-      const rotSpeed = 0.04;
+      const speed = 5.0; 
+      const rotSpeed = 0.05;
       const prevPos = new THREE.Vector3();
 
       window.addEventListener("keydown", (e) => (keys[e.code] = true));
-      window.addEventListener("keyup", (e) => {
-        keys[e.code] = false;
-        if (e.key.toLowerCase() === "f") {
-          spotLight.power = spotLight.power > 0 ? 0 : 840000;
-          spotLight.intensity = spotLight.intensity > 0 ? 0 : 0.5;
-        }
-      });
-
-      function generateMaze(width, height) {
-        // 1. Wypełnij wszystko ścianami (1)
-        const map = [];
-        for (let x = 0; x < width; x++) {
-          map[x] = [];
-          for (let y = 0; y < height; y++) {
-            map[x][y] = 1;
-          }
-        }
-
-        // 2. Funkcja wiercąca korytarze (Recursive Backtracker)
-        function carve(x, y) {
-          const directions = [
-            [1, 0],
-            [-1, 0],
-            [0, 1],
-            [0, -1],
-          ].sort(() => Math.random() - 0.5); // Losowa kolejność kierunków
-
-          for (let i = 0; i < directions.length; i++) {
-            const dx = directions[i][0];
-            const dy = directions[i][1];
-
-            const nx = x + dx * 2;
-            const ny = y + dy * 2;
-
-            if (
-              nx > 0 &&
-              nx < width &&
-              ny > 0 &&
-              ny < height &&
-              map[nx][ny] === 1
-            ) {
-              map[x + dx][y + dy] = 0; // Usuń ścianę pomiędzy
-              map[nx][ny] = 0; // Usuń ścianę w punkcie docelowym
-              carve(nx, ny); // Rekurencja
-            }
-          }
-        }
-
-        // Start z punktu (1,1) i oznacz jako pusty
-        map[1][1] = 0;
-        carve(1, 1);
-
-        // Opcjonalnie: Zrób wejście i wyjście
-        map[1][0] = 0;
-        map[width - 2][height - 1] = 0;
-
-        return map;
-      }
+      window.addEventListener("keyup", (e) => (keys[e.code] = false));
 
       function updatePlayer() {
         prevPos.copy(player.position);
@@ -261,54 +190,42 @@
         player.userData.obb.copy(playerGeo.userData.obb);
         player.userData.obb.applyMatrix4(player.matrixWorld);
 
+        // Prosta optymalizacja kolizji: sprawdzamy tylko pobliskie ściany?
+        // Na razie sprawdzamy wszystkie (dla małego labiryntu OK)
         for (const wallBox of collisionBoxes) {
-          if (player.userData.obb.intersectsBox3(wallBox)) {
-            player.position.copy(prevPos);
-            // Nie używamy return, żeby kamera nadal się aktualizowała nawet jak stoimy w miejscu
-            break;
-          }
+            // Szybkie sprawdzenie odległości, żeby nie liczyć OBB dla odległych ścian
+            if (wallBox.getCenter(new THREE.Vector3()).distanceTo(player.position) > WALL_SIZE * 1.5) continue;
+
+            if (player.userData.obb.intersectsBox3(wallBox)) {
+                player.position.copy(prevPos);
+                break; 
+            }
         }
 
-        // --- KAMERA I RAYCASTING (POPRAWIONE) ---
+        // Kamera
         const idealOffset = new THREE.Vector3(0, 45, 75);
-        idealOffset.applyAxisAngle(
-          new THREE.Vector3(0, 1, 0),
-          player.rotation.y
-        );
-        const idealPosition = new THREE.Vector3()
-          .copy(player.position)
-          .add(idealOffset);
+        idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
+        const idealPosition = new THREE.Vector3().copy(player.position).add(idealOffset);
 
-        const playerHeadPos = new THREE.Vector3()
-          .copy(player.position)
-          .add(new THREE.Vector3(0, 30, 0));
-        const direction = new THREE.Vector3()
-          .subVectors(idealPosition, playerHeadPos)
-          .normalize();
-        const maxDistance = playerHeadPos.distanceTo(idealPosition);
+        const playerHeadPos = new THREE.Vector3().copy(player.position).add(new THREE.Vector3(0, 30, 0));
+        const direction = new THREE.Vector3().subVectors(idealPosition, playerHeadPos).normalize();
+        const dist = playerHeadPos.distanceTo(idealPosition);
 
         cameraRaycaster.set(playerHeadPos, direction);
-        cameraRaycaster.far = maxDistance;
-
+        cameraRaycaster.far = dist;
         const intersects = cameraRaycaster.intersectObjects(wallMeshes);
 
         if (intersects.length > 0) {
-          const hitPoint = intersects[0].point;
-          const buffer = direction.clone().multiplyScalar(-2.0);
-          camera.position.copy(hitPoint).add(buffer);
+           camera.position.copy(intersects[0].point).add(direction.multiplyScalar(-2));
         } else {
-          camera.position.copy(idealPosition);
+           camera.position.copy(idealPosition);
         }
+        camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 20, 0)));
 
-        const lookTarget = player.position
-          .clone()
-          .add(new THREE.Vector3(0, 20, 0));
-        camera.lookAt(lookTarget);
-
+        // Światło
         spotLight.position.copy(player.position);
-        spotLight.target.position
-          .copy(player.position)
-          .add(new THREE.Vector3(0, 0, -1).applyQuaternion(player.quaternion));
+        spotLight.position.y += 20; 
+        spotLight.target.position.copy(player.position).add(new THREE.Vector3(0, -10, -50).applyQuaternion(player.quaternion));
         spotLight.target.updateMatrixWorld();
       }
 
@@ -317,10 +234,9 @@
         updatePlayer();
         renderer.render(scene, camera);
       }
-
       animate();
 
-      window.addEventListener("resize", () => {
+      window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
