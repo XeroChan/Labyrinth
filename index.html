@@ -3,7 +3,12 @@
   <head>
     <title>Labirynt - Procedural Grid</title>
     <meta charset="UTF-8" />
-    <style>body { margin: 0; overflow: hidden; }</style>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
     <script type="importmap">
       {
         "imports": {
@@ -17,18 +22,26 @@
       import { OBB } from "three/addons/math/OBB.js";
 
       // --- KONFIGURACJA ---
-      const WALL_SIZE = 120;  // Rozmiar jednego klocka
-      const MAZE_WIDTH = 21;  // Szerokość (musi być nieparzysta!)
+      const WALL_SIZE = 120; // Rozmiar jednego klocka
+      const MAZE_WIDTH = 21; // Szerokość (musi być nieparzysta!)
       const MAZE_HEIGHT = 21; // Wysokość (musi być nieparzysta!)
-      
+
       // Obliczamy przesunięcie, żeby labirynt był wycentrowany na (0,0,0)
       const OFFSET_X = (MAZE_WIDTH * WALL_SIZE) / 2;
       const OFFSET_Z = (MAZE_HEIGHT * WALL_SIZE) / 2;
 
       // --- SETUP SCENY ---
       const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1.5, 5000);
-      const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        1.5,
+        5000
+      );
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        logarithmicDepthBuffer: true,
+      });
       const cameraRaycaster = new THREE.Raycaster();
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
@@ -41,7 +54,9 @@
       texGround.wrapS = texGround.wrapT = THREE.RepeatWrapping;
       texGround.repeat.set(MAZE_WIDTH, MAZE_HEIGHT); // Dopasowanie do rozmiaru labiryntu
 
-      const texHedgeBase = texLoader.load("/assets/textures/Maze/hedgeFixedProbably.png");
+      const texHedgeBase = texLoader.load(
+        "/assets/textures/Maze/hedgeFixedProbably.png"
+      );
       const texHedgeX = texLoader.load("/assets/textures/Maze/hedgeX.png");
 
       scene.background = new THREE.CubeTextureLoader()
@@ -49,49 +64,142 @@
         .load(["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]);
       scene.fog = new THREE.FogExp2(0xcccccc, 0.005);
 
-      // --- ALGORYTM GENEROWANIA (Recursive Backtracker) ---
+      // --- ULEPSZONY GENERATOR (Z PĘTLAMI) ---
       function generateMaze(width, height) {
-          const map = [];
-          // 1. Wypełnij ścianami
-          for (let x = 0; x < width; x++) {
-              map[x] = [];
-              for (let y = 0; y < height; y++) {
-                  map[x][y] = 1; 
-              }
+        // Ustawienia trudności
+        // 0 = same ślepe zaułki (łatwy do zgubienia się, ale liniowy)
+        // 0.5 = zrównoważony (sporo pętli, sporo zaułków)
+        // 1.0 = brak ślepych zaułków (sam parkour)
+        const BRAID_CHANCE = 0.5;
+
+        const map = [];
+
+        // 1. Wypełnij ścianami (1)
+        for (let x = 0; x < width; x++) {
+          map[x] = [];
+          for (let y = 0; y < height; y++) {
+            map[x][y] = 1;
           }
+        }
 
-          // 2. Wytnij korytarze
-          function carve(x, y) {
-              const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]].sort(() => Math.random() - 0.5);
-              for (let i = 0; i < directions.length; i++) {
-                  const dx = directions[i][0];
-                  const dy = directions[i][1];
-                  const nx = x + (dx * 2);
-                  const ny = y + (dy * 2);
+        // 2. Algorytm Recursive Backtracker (tworzy główny szkielet)
+        function carve(x, y) {
+          // Losowa kolejność: Góra, Dół, Lewo, Prawo
+          const directions = [
+            [0, -1],
+            [0, 1],
+            [-1, 0],
+            [1, 0],
+          ].sort(() => Math.random() - 0.5);
 
-                  if (nx > 0 && nx < width && ny > 0 && ny < height && map[nx][ny] === 1) {
-                      map[x + dx][y + dy] = 0;
-                      map[nx][ny] = 0;
-                      carve(nx, ny);
+          for (let i = 0; i < directions.length; i++) {
+            const dx = directions[i][0];
+            const dy = directions[i][1];
+
+            const nx = x + dx * 2;
+            const ny = y + dy * 2;
+
+            // Jeśli sąsiad jest w granicach mapy i jest ścianą
+            if (
+              nx > 0 &&
+              nx < width &&
+              ny > 0 &&
+              ny < height &&
+              map[nx][ny] === 1
+            ) {
+              map[x + dx][y + dy] = 0; // Usuń ścianę pomiędzy
+              map[nx][ny] = 0; // Oznacz cel jako odwiedzony
+              carve(nx, ny); // Rekurencja
+            }
+          }
+        }
+
+        // Startujemy z punktu (1,1)
+        map[1][1] = 0;
+        carve(1, 1);
+
+        // 3. BRAIDING - Tworzenie pętli (Nowość!)
+        // Przechodzimy po wszystkich korytarzach (tylko nieparzyste indeksy to "pokoje")
+        for (let x = 1; x < width - 1; x += 2) {
+          for (let y = 1; y < height - 1; y += 2) {
+            // Jeśli to nie jest korytarz, pomiń
+            if (map[x][y] === 1) continue;
+
+            // Sprawdźmy, czy to ślepy zaułek (ma tylko 1 wyjście)
+            // Liczymy otwarte sąsiednie pola (0)
+            let openNeighbors = [];
+            if (map[x + 1][y] === 0) openNeighbors.push([1, 0]);
+            if (map[x - 1][y] === 0) openNeighbors.push([-1, 0]);
+            if (map[x][y + 1] === 0) openNeighbors.push([0, 1]);
+            if (map[x][y - 1] === 0) openNeighbors.push([0, -1]);
+
+            // Jeśli ma tylko 1 wyjście, to jest to ślepy zaułek!
+            if (openNeighbors.length === 1 && Math.random() < BRAID_CHANCE) {
+              // Znajdźmy sąsiadów, którzy są odwiedzeni (0), ale oddzieleni ścianą (1)
+              // Czyli potencjalne miejsca na przebicie pętli
+              let potentialConnections = [];
+              const directions = [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1],
+              ];
+
+              for (let d of directions) {
+                const nx = x + d[0] * 2;
+                const ny = y + d[1] * 2;
+
+                // Sprawdź czy sąsiad 2 pola dalej jest w mapie i jest korytarzem (0)
+                // ORAZ czy nie jest to ten jedyny korytarz, z którego przyszliśmy
+                if (
+                  nx > 0 &&
+                  nx < width &&
+                  ny > 0 &&
+                  ny < height &&
+                  map[nx][ny] === 0
+                ) {
+                  // Sprawdź czy to nie jest ten sam kierunek co istniejące wyjście
+                  const existing = openNeighbors[0];
+                  if (d[0] !== existing[0] || d[1] !== existing[1]) {
+                    potentialConnections.push(d);
                   }
+                }
               }
-          }
 
-          map[1][1] = 0; // Start
-          carve(1, 1);
-          map[1][0] = 0; // Wejście
-          map[width - 2][height - 1] = 0; // Wyjście
-          return map;
+              // Jeśli mamy gdzie się przebić, robimy to!
+              if (potentialConnections.length > 0) {
+                const toDig =
+                  potentialConnections[
+                    Math.floor(Math.random() * potentialConnections.length)
+                  ];
+                // Zburz ścianę pomiędzy
+                map[x + toDig[0]][y + toDig[1]] = 0;
+              }
+            }
+          }
+        }
+
+        // Wejście i wyjście
+        map[1][0] = 0;
+        map[width - 2][height - 1] = 0;
+
+        return map;
       }
 
       const mazeMap = generateMaze(MAZE_WIDTH, MAZE_HEIGHT);
 
       // --- BUDOWANIE ŚWIATA ---
-      
+
       // Podłoga
       const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(MAZE_WIDTH * WALL_SIZE, MAZE_HEIGHT * WALL_SIZE),
-        new THREE.MeshStandardMaterial({ map: texGround, side: THREE.DoubleSide })
+        new THREE.PlaneGeometry(
+          MAZE_WIDTH * WALL_SIZE,
+          MAZE_HEIGHT * WALL_SIZE
+        ),
+        new THREE.MeshStandardMaterial({
+          map: texGround,
+          side: THREE.DoubleSide,
+        })
       );
       ground.rotation.x = -Math.PI / 2;
       ground.position.y = 0.1;
@@ -110,35 +218,38 @@
       // Policz ściany
       let wallCount = 0;
       for (let x = 0; x < MAZE_WIDTH; x++) {
-          for (let y = 0; y < MAZE_HEIGHT; y++) {
-              if (mazeMap[x][y] === 1) wallCount++;
-          }
+        for (let y = 0; y < MAZE_HEIGHT; y++) {
+          if (mazeMap[x][y] === 1) wallCount++;
+        }
       }
 
       const mesh = new THREE.InstancedMesh(geometry, materials, wallCount);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
-      
+
       const dummy = new THREE.Object3D();
       let index = 0;
 
       for (let x = 0; x < MAZE_WIDTH; x++) {
-          for (let z = 0; z < MAZE_HEIGHT; z++) {
-              if (mazeMap[x][z] === 1) {
-                  // Pozycja w świecie = (Grid * Rozmiar) - Offset
-                  const worldX = (x * WALL_SIZE) - OFFSET_X + (WALL_SIZE/2);
-                  const worldZ = (z * WALL_SIZE) - OFFSET_Z + (WALL_SIZE/2);
+        for (let z = 0; z < MAZE_HEIGHT; z++) {
+          if (mazeMap[x][z] === 1) {
+            // Pozycja w świecie = (Grid * Rozmiar) - Offset
+            const worldX = x * WALL_SIZE - OFFSET_X + WALL_SIZE / 2;
+            const worldZ = z * WALL_SIZE - OFFSET_Z + WALL_SIZE / 2;
 
-                  dummy.position.set(worldX, WALL_SIZE / 2, worldZ);
-                  dummy.updateMatrix();
-                  mesh.setMatrixAt(index++, dummy.matrix);
+            dummy.position.set(worldX, WALL_SIZE / 2, worldZ);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(index++, dummy.matrix);
 
-                  // Box kolizji
-                  const box = new THREE.Box3();
-                  box.setFromCenterAndSize(dummy.position, new THREE.Vector3(WALL_SIZE, WALL_SIZE, WALL_SIZE));
-                  collisionBoxes.push(box);
-              }
+            // Box kolizji
+            const box = new THREE.Box3();
+            box.setFromCenterAndSize(
+              dummy.position,
+              new THREE.Vector3(WALL_SIZE, WALL_SIZE, WALL_SIZE)
+            );
+            collisionBoxes.push(box);
           }
+        }
       }
       scene.add(mesh);
       wallMeshes.push(mesh);
@@ -147,16 +258,19 @@
       const playerGeo = new THREE.BoxGeometry(24, 70, 24);
       playerGeo.computeBoundingBox();
       playerGeo.userData.obb = new OBB().fromBox3(playerGeo.boundingBox);
-      const player = new THREE.Mesh(playerGeo, new THREE.MeshStandardMaterial({ color: "red" }));
-      
+      const player = new THREE.Mesh(
+        playerGeo,
+        new THREE.MeshStandardMaterial({ color: "red" })
+      );
+
       // !!! NAPRAWA SPAWNU !!!
       // Ustawiamy gracza na polu [1][1] (zawsze puste w tym algorytmie)
       const startGridX = 1;
       const startGridZ = 1;
       player.position.set(
-          (startGridX * WALL_SIZE) - OFFSET_X + (WALL_SIZE/2),
-          35.001, 
-          (startGridZ * WALL_SIZE) - OFFSET_Z + (WALL_SIZE/2)
+        startGridX * WALL_SIZE - OFFSET_X + WALL_SIZE / 2,
+        35.001,
+        startGridZ * WALL_SIZE - OFFSET_Z + WALL_SIZE / 2
       );
 
       player.userData.obb = new OBB();
@@ -164,14 +278,20 @@
 
       // Światła
       scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-      const spotLight = new THREE.SpotLight(0xffffff, 1000, 500, Math.PI / 8, 0.5); // Zwiększona moc dla Three r160
+      const spotLight = new THREE.SpotLight(
+        0xffffff,
+        1000,
+        500,
+        Math.PI / 8,
+        0.5
+      ); // Zwiększona moc dla Three r160
       spotLight.castShadow = true;
       scene.add(spotLight);
       scene.add(spotLight.target);
 
       // --- LOGIKA ---
       const keys = {};
-      const speed = 5.0; 
+      const speed = 5.0;
       const rotSpeed = 0.05;
       const prevPos = new THREE.Vector3();
 
@@ -193,22 +313,35 @@
         // Prosta optymalizacja kolizji: sprawdzamy tylko pobliskie ściany?
         // Na razie sprawdzamy wszystkie (dla małego labiryntu OK)
         for (const wallBox of collisionBoxes) {
-            // Szybkie sprawdzenie odległości, żeby nie liczyć OBB dla odległych ścian
-            if (wallBox.getCenter(new THREE.Vector3()).distanceTo(player.position) > WALL_SIZE * 1.5) continue;
+          // Szybkie sprawdzenie odległości, żeby nie liczyć OBB dla odległych ścian
+          if (
+            wallBox.getCenter(new THREE.Vector3()).distanceTo(player.position) >
+            WALL_SIZE * 1.5
+          )
+            continue;
 
-            if (player.userData.obb.intersectsBox3(wallBox)) {
-                player.position.copy(prevPos);
-                break; 
-            }
+          if (player.userData.obb.intersectsBox3(wallBox)) {
+            player.position.copy(prevPos);
+            break;
+          }
         }
 
         // Kamera
         const idealOffset = new THREE.Vector3(0, 45, 75);
-        idealOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
-        const idealPosition = new THREE.Vector3().copy(player.position).add(idealOffset);
+        idealOffset.applyAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          player.rotation.y
+        );
+        const idealPosition = new THREE.Vector3()
+          .copy(player.position)
+          .add(idealOffset);
 
-        const playerHeadPos = new THREE.Vector3().copy(player.position).add(new THREE.Vector3(0, 30, 0));
-        const direction = new THREE.Vector3().subVectors(idealPosition, playerHeadPos).normalize();
+        const playerHeadPos = new THREE.Vector3()
+          .copy(player.position)
+          .add(new THREE.Vector3(0, 30, 0));
+        const direction = new THREE.Vector3()
+          .subVectors(idealPosition, playerHeadPos)
+          .normalize();
         const dist = playerHeadPos.distanceTo(idealPosition);
 
         cameraRaycaster.set(playerHeadPos, direction);
@@ -216,16 +349,22 @@
         const intersects = cameraRaycaster.intersectObjects(wallMeshes);
 
         if (intersects.length > 0) {
-           camera.position.copy(intersects[0].point).add(direction.multiplyScalar(-2));
+          camera.position
+            .copy(intersects[0].point)
+            .add(direction.multiplyScalar(-2));
         } else {
-           camera.position.copy(idealPosition);
+          camera.position.copy(idealPosition);
         }
         camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 20, 0)));
 
         // Światło
         spotLight.position.copy(player.position);
-        spotLight.position.y += 20; 
-        spotLight.target.position.copy(player.position).add(new THREE.Vector3(0, -10, -50).applyQuaternion(player.quaternion));
+        spotLight.position.y += 20;
+        spotLight.target.position
+          .copy(player.position)
+          .add(
+            new THREE.Vector3(0, -10, -50).applyQuaternion(player.quaternion)
+          );
         spotLight.target.updateMatrixWorld();
       }
 
@@ -236,7 +375,7 @@
       }
       animate();
 
-      window.addEventListener('resize', () => {
+      window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
