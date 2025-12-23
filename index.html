@@ -130,12 +130,12 @@
       scene.add(player);
 
       // --- LATARKA ---
-      scene.add(new THREE.AmbientLight(0xffffff, 0.1)); 
-      const flashlight = new THREE.SpotLight(0xffffff, 100);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.01)); 
+      const flashlight = new THREE.SpotLight(0xffffff, 180);
       flashlight.angle = Math.PI / 5;
       flashlight.penumbra = 0.3;
       flashlight.decay = 1.5;
-      flashlight.distance = 1000;
+      flashlight.distance = 4000;
       flashlight.castShadow = true;
       scene.add(flashlight);
       scene.add(flashlight.target);
@@ -279,7 +279,7 @@
 
         // 5. Latarka
         if (inputs.toggleLight) {
-            flashlight.intensity = (flashlight.intensity > 0) ? 0 : 100;
+            flashlight.intensity = (flashlight.intensity > 0) ? 0 : 180;
         }
 
         flashlight.position.copy(player.position);
