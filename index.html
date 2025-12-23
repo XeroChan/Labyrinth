@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pl-PL">
   <head>
-    <title>Labirynt - Procedural Grid</title>
+    <title>Labirynt - FPP/TPP Toggle</title>
     <meta charset="UTF-8" />
     <style>
       body {
@@ -21,10 +21,14 @@
       import * as THREE from "three";
       import { OBB } from "three/addons/math/OBB.js";
 
-      // --- ZMIENNE GLOBALNE (KLUCZOWE DLA PADA) ---
-      // Muszą być tutaj, na zewnątrz wszystkich funkcji!
-      let lastButtonState = false; 
-      let lastKeyFState = false;
+      // --- ZMIENNE GLOBALNE ---
+      let lastButtonState = false;  // Latarka (Pad)
+      let lastCamBtnState = false;  // Kamera (Pad)
+      let lastKeyFState = false;    // Latarka (Klawiatura)
+      let lastKeyCState = false;    // Kamera (Klawiatura)
+      
+      let isFPP = false;            // Startujemy w TPP
+
       const keys = {};
 
       // --- KONFIGURACJA ---
@@ -39,6 +43,7 @@
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1.5, 5000);
       const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
       const cameraRaycaster = new THREE.Raycaster();
+      
       renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -52,12 +57,11 @@
       const texHedgeBase = texLoader.load("/assets/textures/Maze/hedgeFixedProbably.png");
       const texHedgeX = texLoader.load("/assets/textures/Maze/hedgeX.png");
 
-      scene.background = new THREE.Color(0x111111); // Ciemne tło, żeby było widać latarkę
-      scene.fog = new THREE.FogExp2(0x111111, 0.002); // Ciemna mgła
+      scene.background = new THREE.Color(0x111111);
+      scene.fog = new THREE.FogExp2(0x111111, 0.002);
 
       // --- GENERATOR LABIRYNTU ---
       function generateMaze(width, height) {
-         // ... (Tutaj Twój kod generatora bez zmian, skróciłem dla czytelności) ...
          const map = [];
          for (let x = 0; x < width; x++) { map[x] = []; for (let y = 0; y < height; y++) map[x][y] = 1; }
          function carve(x, y) {
@@ -120,27 +124,21 @@
       playerGeo.computeBoundingBox();
       playerGeo.userData.obb = new OBB().fromBox3(playerGeo.boundingBox);
       const player = new THREE.Mesh(playerGeo, new THREE.MeshStandardMaterial({ color: "red" }));
-      player.castShadow = true; // Gracz rzuca cień
+      player.castShadow = true; 
       player.position.set(1 * WALL_SIZE - OFFSET_X + WALL_SIZE / 2, 35.001, 1 * WALL_SIZE - OFFSET_Z + WALL_SIZE / 2);
       player.userData.obb = new OBB();
       scene.add(player);
 
-      // --- LATARKA (POPRAWIONA) ---
-      // AmbientLight bardzo słaby, żeby latarka była widoczna
+      // --- LATARKA ---
       scene.add(new THREE.AmbientLight(0xffffff, 0.1)); 
-
-      const flashlight = new THREE.SpotLight(0xffffff, 100); // Duża moc!
+      const flashlight = new THREE.SpotLight(0xffffff, 100);
       flashlight.angle = Math.PI / 5;
       flashlight.penumbra = 0.3;
       flashlight.decay = 1.5;
-      flashlight.distance = 1000; // Zwiększony zasięg!
+      flashlight.distance = 1000;
       flashlight.castShadow = true;
       scene.add(flashlight);
       scene.add(flashlight.target);
-
-      // HELPER - Pokaże gdzie jest latarka (linie pomocnicze)
-      const lightHelper = new THREE.SpotLightHelper(flashlight);
-      scene.add(lightHelper);
 
       // --- STEROWANIE ---
       const maxSpeed = 5.0;
@@ -150,19 +148,41 @@
       window.addEventListener("keydown", (e) => (keys[e.code] = true));
       window.addEventListener("keyup", (e) => (keys[e.code] = false));
 
-      // --- FUNKCJA ODCZYTU INPUTU (Z NAPRAWIONYM PADEM) ---
+      // Funkcja pomocnicza do obsługi klawiszy toggle (żeby nie mrugały)
+      function handleToggle(isPressed, lastState, callback) {
+          if (isPressed) {
+              if (!lastState) {
+                  callback();
+                  return true; // Nowy stan lastState
+              }
+              return true; // Utrzymaj true
+          }
+          return false; // Zresetuj lastState
+      }
+
       function getInputs() {
         let move = 0;
         let turn = 0;
         let toggleLight = false;
+        let toggleCamera = false;
 
-        // Klawiatura
+        // --- KLAWIATURA ---
         if (keys["ArrowUp"] || keys["KeyW"]) move = -1;
         if (keys["ArrowDown"] || keys["KeyS"]) move = 1;
         if (keys["ArrowLeft"] || keys["KeyA"]) turn = 1;
         if (keys["ArrowRight"] || keys["KeyD"]) turn = -1;
         
-        // Gamepad
+        // Latarka (F)
+        if (keys["KeyF"]) {
+             if (!lastKeyFState) { toggleLight = true; lastKeyFState = true; }
+        } else { lastKeyFState = false; }
+
+        // Kamera (C)
+        if (keys["KeyC"]) {
+             if (!lastKeyCState) { toggleCamera = true; lastKeyCState = true; }
+        } else { lastKeyCState = false; }
+
+        // --- GAMEPAD ---
         const gamepads = navigator.getGamepads();
         const gp = gamepads ? gamepads[0] : null;
 
@@ -171,32 +191,38 @@
             if (Math.abs(gp.axes[1]) > deadzone) move = gp.axes[1];
             if (Math.abs(gp.axes[0]) > deadzone) turn = -gp.axes[0];
 
-            // Przycisk A (lub B)
-            const btnPressed = gp.buttons[0].pressed || gp.buttons[1].pressed;
-            
-            // LOGIKA FLIP-FLOP (BLOKADA MRUGANIA)
-            if (btnPressed) {
-                if (!lastButtonState) {
-                    console.log("KLIK! Latarka przełączona"); // Zobacz w konsoli F12
-                    toggleLight = true;
-                    lastButtonState = true; // Blokujemy!
-                }
-            } else {
-                lastButtonState = false; // Odblokowujemy dopiero jak puścisz
-            }
+            // Przycisk A (0) - Latarka
+            const btnA = gp.buttons[0].pressed || gp.buttons[1].pressed; // Zabezpieczenie dla różnych padów
+            if (btnA) {
+                if (!lastButtonState) { toggleLight = true; lastButtonState = true; }
+            } else { lastButtonState = false; }
+
+            // Przycisk Y (3) - Kamera (Na Xbox to 'Y', na PS to Trójkąt)
+            const btnY = gp.buttons[3].pressed; 
+            if (btnY) {
+                if (!lastCamBtnState) { toggleCamera = true; lastCamBtnState = true; }
+            } else { lastCamBtnState = false; }
         }
-        return { move, turn, toggleLight };
+        return { move, turn, toggleLight, toggleCamera };
       }
 
       function updatePlayer() {
         const inputs = getInputs();
 
-        // 1. Ruch
+        // 1. Zmiana Kamery FPP/TPP
+        if (inputs.toggleCamera) {
+            isFPP = !isFPP;
+        }
+
+        // Ukrywamy gracza w FPP, żeby nie zasłaniał widoku
+        player.visible = !isFPP; 
+
+        // 2. Ruch
         prevPos.copy(player.position);
         if (inputs.move !== 0) player.translateZ(inputs.move * maxSpeed);
         if (inputs.turn !== 0) player.rotation.y += inputs.turn * rotSpeed;
 
-        // 2. Kolizje
+        // 3. Kolizje Gracza
         player.updateMatrixWorld();
         player.userData.obb.copy(playerGeo.userData.obb);
         player.userData.obb.applyMatrix4(player.matrixWorld);
@@ -209,35 +235,62 @@
             }
         }
 
-        // 3. Kamera (TPP)
-        const idealOffset = new THREE.Vector3(0, 45, 75).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
-        const idealPosition = new THREE.Vector3().copy(player.position).add(idealOffset);
-        camera.position.lerp(idealPosition, 0.1); // Płynniejsza kamera
-        camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 20, 0)));
+        // -----------------------------------------------------
+        // 4. LOGIKA KAMERY (ROZDZIELONA NA FPP i TPP)
+        // -----------------------------------------------------
+        
+        if (isFPP) {
+            // --- TRYB PIERWSZOOSOBOWY (FPP) ---
+            
+            // Kamera jest w miejscu głowy gracza
+            const headPos = player.position.clone().add(new THREE.Vector3(0, 30, 0));
+            camera.position.copy(headPos);
+            
+            // Kamera patrzy tam gdzie gracz, ale lekko w dół/środek (jak w FPS)
+            // Używamy tego samego celu co w TPP dla spójności
+            const lookTarget = player.position.clone().add(new THREE.Vector3(0, 30, -100).applyQuaternion(player.quaternion));
+            camera.lookAt(lookTarget);
 
-        // 4. Latarka
+        } else {
+            // --- TRYB TRZECIOOSOBOWY (TPP) - z kolizjami ---
+            
+            const idealOffset = new THREE.Vector3(0, 45, 75).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
+            const idealPosition = new THREE.Vector3().copy(player.position).add(idealOffset);
+            const playerHeadPos = new THREE.Vector3().copy(player.position).add(new THREE.Vector3(0, 30, 0));
+            
+            const direction = new THREE.Vector3().subVectors(idealPosition, playerHeadPos).normalize();
+            const maxDist = playerHeadPos.distanceTo(idealPosition);
+
+            cameraRaycaster.set(playerHeadPos, direction);
+            cameraRaycaster.far = maxDist;
+
+            const intersects = cameraRaycaster.intersectObjects(wallMeshes);
+            let finalCameraPos = idealPosition;
+
+            if (intersects.length > 0) {
+                finalCameraPos = intersects[0].point.add(direction.multiplyScalar(-2.0));
+            }
+
+            camera.position.lerp(finalCameraPos, 0.2);
+            camera.lookAt(player.position.clone().add(new THREE.Vector3(0, 20, 0)));
+        }
+
+        // -----------------------------------------------------
+
+        // 5. Latarka
         if (inputs.toggleLight) {
-            // Przełączanie mocy: 0 (wył) <-> 100 (wł)
             flashlight.intensity = (flashlight.intensity > 0) ? 0 : 100;
         }
 
-        // Aktualizacja pozycji latarki
         flashlight.position.copy(player.position);
-        flashlight.position.y += 20; // Wysokość głowy
-
-        // WAŻNE: Przesuwamy źródło światła minimalnie do przodu przed gracza
-        // Inaczej cień gracza zablokuje całe światło!
+        flashlight.position.y += 20; 
         const forwardShift = new THREE.Vector3(0, 0, -15).applyQuaternion(player.quaternion);
         flashlight.position.add(forwardShift);
 
-        // Celujemy daleko w przód
         flashlight.target.position.copy(player.position).add(
             new THREE.Vector3(0, -10, -100).applyQuaternion(player.quaternion)
         );
         flashlight.target.updateMatrixWorld();
-        
-        // Aktualizacja Helpera (linii pomocniczych)
-        lightHelper.update();
       }
 
       function animate() {
